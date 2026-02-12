@@ -6,6 +6,8 @@ public class Worker(ILogger<Worker> logger, ListScraper scraper) : BackgroundSer
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         await scraper.ScrapeListAsync();
+
+        
         // while (!stoppingToken.IsCancellationRequested)
         // {
         //     if (logger.IsEnabled(LogLevel.Information))
