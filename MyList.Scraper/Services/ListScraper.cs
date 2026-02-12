@@ -1,7 +1,9 @@
 using System.Reflection.Metadata;
 using System.Text.Encodings.Web;
 using HtmlAgilityPack;
+using System.Linq;
 using MyList.Scraper.Models;
+using System.Net;
 
 namespace MyList.Scraper.Services
 {
@@ -20,7 +22,7 @@ namespace MyList.Scraper.Services
             {
                 string html = await _httpClient.GetStringAsync(url);
                 return html;
-            } 
+            }
             catch (HttpRequestException e)
             {
                 _logger.LogError($"\nCaught HTTP Request Exception: {e.Message}");
@@ -43,7 +45,7 @@ namespace MyList.Scraper.Services
             {
                 _logger.LogError("\nFailed to fetch weekly page URLs");
                 return [];
-            } 
+            }
 
             // load html into doc
             var doc = new HtmlAgilityPack.HtmlDocument();
@@ -66,23 +68,60 @@ namespace MyList.Scraper.Services
 
         /* 
             Capture show data for each page/week 
-        */ 
+        */
         public List<Show> ParseWeeklyPage(string html)
         {
-            return [];
+            List<Show> weeklyShows = [];
+
+            // load html into doc
+            var doc = new HtmlAgilityPack.HtmlDocument();
+            doc.LoadHtml(html);
+
+            // parse shows for this week 
+            var nodes = doc.DocumentNode.SelectNodes("//body/ul/li");
+            foreach (var node in nodes)
+            {
+                // capture day and shows 
+                string day = node.SelectSingleNode(".//a//b").InnerText; // "Wed Feb 11"
+                var shows = node.SelectNodes(".//ul//li");
+
+                // parse shows for this day 
+                foreach (var show in shows)
+                {
+                    // capture metadata 
+                    string[] location = show.SelectSingleNode(".//b//a").InnerText.Split(",");
+                    List<string> artists = show.SelectNodes(".//a")
+                        .Select(artist => artist.InnerText).ToList();
+                    string meta = string.Join(" ", show.SelectNodes("./text()")
+                        .Select(n => n.InnerText.Trim())
+                        .Where(text => text != "" && text != ","));
+
+                    // TODO: construct Show objects and add to return list 
+                    _logger.LogInformation($"\nDATE: {day}\nVENUE: {location[0]}\nCITY: {location[1]}\nARTIST: {string.Join(", ", artists)}\nMETA: {meta}\n");
+                }
+
+            }
+
+            return weeklyShows;
         }
 
         /*  
             Scrape "The List" and capture all show data  
         */
         public async Task<List<Show>> ScrapeListAsync()
-        {   
+        {
             List<Uri> urls = await GetWeeklyPageUrls();
             List<Show> shows = [];
 
+            int counterDebug = 0;
+
             foreach (Uri url in urls)
             {
+                if (counterDebug > 0) break;
                 _logger.LogInformation(url.ToString());
+                string html = await GetHtml(url);
+                ParseWeeklyPage(html);
+                counterDebug++;
             }
 
             return shows;
