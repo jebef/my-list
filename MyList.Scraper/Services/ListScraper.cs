@@ -103,27 +103,79 @@ namespace MyList.Scraper.Services
                         Artists = artists
                     };
 
+                    // capture and parse metadata 
                     string meta = string.Join(" ", show.SelectNodes("./text()")
                         .Select(n => n.InnerText.Trim())
                         .Where(text => text != "" && text != ","))
                         .Trim();
 
+                    // age 
                     var ageMatch = Regex.Match(meta, @"(a/a|21\+|18\+|16\+|14\+|12\+)(\s+\(([^)]+)\))?");
-                    if (ageMatch.Success)
+                    if (ageMatch.Success && ageMatch.Groups[1].Value == "a/a")
                     {
-                        s.AllAges = ageMatch.Groups[1].Value == "a/a";
+                        s.AllAges = true;
                         s.AgeMeta = ageMatch.Groups[3].Success ? ageMatch.Groups[3].Value : null;
+                    }
+                    else if (ageMatch.Success)
+                    {
+                        s.AllAges = false;
+                        s.AgeMeta = ageMatch.Groups[3].Success ?
+                            ageMatch.Groups[1].Value + ageMatch.Groups[3].Value : ageMatch.Groups[1].Value;
                     }
                     else
                     {
                         s.AllAges = false;
+                        s.AgeMeta = null;
                     }
 
+                    // price 
+                    var priceMatch = Regex.Match(meta, @"\$(\d+(?:\.\d{2})?)");
+                    if (priceMatch.Success && decimal.TryParse(priceMatch.Groups[1].Value, out decimal price))
+                    {
+                        s.Price = price;
+                    }
+                    if (meta.Contains("free")) s.Price = 0;
+
+                    // time 
+                    string[] timeFormats = ["htt", "hhtt", "h:mmtt", "hh:mmtt"];
+                    // "and" format (5pm and 7:30pm)
+                    var andStartTimesMatch = Regex.Match(meta, @"\s(\d{1,2}(?::\d{2})?(?:am|pm))\s(?:and)\s(\d{1,2}(?::\d{2})?(?:am|pm))");
+                    if (andStartTimesMatch.Success)
+                    {
+                        TimeOnly.TryParseExact(andStartTimesMatch.Groups[1].Value, timeFormats, null,
+                            System.Globalization.DateTimeStyles.None, out TimeOnly t1);
+                        TimeOnly.TryParseExact(andStartTimesMatch.Groups[2].Value, timeFormats, null,
+                            System.Globalization.DateTimeStyles.None, out TimeOnly t2);
+                        s.StartTimes = [t1, t2];
+                    }
+                    else
+                    {
+                        // "doors/show" format (8pm/8:30pm) or single time (8pm)
+                        var timesMatch = Regex.Matches(meta, @"\d{1,2}(?::\d{2})?(?:am|pm)");
+                        if (timesMatch.Count >= 2)
+                        {
+                            TimeOnly.TryParseExact(timesMatch[0].Value, timeFormats, null,
+                                System.Globalization.DateTimeStyles.None, out TimeOnly doors);
+                            TimeOnly.TryParseExact(timesMatch[1].Value, timeFormats, null,
+                                System.Globalization.DateTimeStyles.None, out TimeOnly start);
+                            s.DoorsTime = doors;
+                            s.StartTimes = [start];
+                        }
+                        else if (timesMatch.Count == 1)
+                        {
+                            TimeOnly.TryParseExact(timesMatch[0].Value, timeFormats, null,
+                                System.Globalization.DateTimeStyles.None, out TimeOnly start);
+                            s.StartTimes = [start];
+                        }
+                    }
+
+                    // symbols 
                     s.Recommended = meta.Contains(" *");
                     s.U21DrinkTix = meta.Contains(" ^");
                     s.PitWarning = meta.Contains(" @");
                     s.NoInsOuts = meta.Contains(" #");
-
+                    var willSellOutMatch = Regex.Match(meta, @"\$[^0-9]");
+                    s.WillSellOut = willSellOutMatch.Success;
 
                     weeklyShows.Add(s);
                     _logger.LogInformation(s.ToString());

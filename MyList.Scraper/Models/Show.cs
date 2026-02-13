@@ -21,8 +21,8 @@ namespace MyList.Scraper.Models
 
         public override string ToString()
         {
-            string a = $"DATE: {Date}\nSTART TIME(S): {(StartTimes != null ? string.Join(" ", StartTimes) : "")}\n";
-            string b = $"DOORS: {DoorsTime}\nEND TIME: {EndTime}\nVENUE: {Venue}\nCITY: {City}\n";
+            string a = $"DATE: {Date}\nDOORS: {DoorsTime}\n";
+            string b = $"START TIME(S): {(StartTimes != null ? string.Join(" ", StartTimes) : "")}\nEND TIME: {EndTime}\nVENUE: {Venue}\nCITY: {City}\n";
             string c = $"ARTISTS: {string.Join(", ", Artists)}\nPRICE: {Price}\nRECOMMENDED: {Recommended}\n";
             string d = $"WILL SELL OUT: {WillSellOut}\nUNDER 21 DRINK TIX: {U21DrinkTix}\nALL AGES: {AllAges}\n";
             string e = $"AGE META: {AgeMeta}\nPIT WARNING: {PitWarning}\nNO INS/OUTS: {NoInsOuts}\nSOLD OUT: {SoldOut}\n";
