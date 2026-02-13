@@ -1,9 +1,10 @@
-using System.Reflection.Metadata;
 using System.Text.Encodings.Web;
+using System.Text.RegularExpressions;
 using HtmlAgilityPack;
 using System.Linq;
 using MyList.Scraper.Models;
 using System.Net;
+using Microsoft.VisualBasic;
 
 namespace MyList.Scraper.Services
 {
@@ -88,16 +89,44 @@ namespace MyList.Scraper.Services
                 // parse shows for this day 
                 foreach (var show in shows)
                 {
-                    // capture metadata 
-                    string[] location = show.SelectSingleNode(".//b//a").InnerText.Split(",");
-                    List<string> artists = show.SelectNodes(".//a")
-                        .Select(artist => artist.InnerText).ToList();
+                    string[] location = show.SelectSingleNode("./b/a").InnerText.Split(",");
+
+                    List<string> artists = show.SelectNodes("./a")
+                        .Select(artist => artist.InnerText)
+                        .ToList();
+
+                    var s = new Show
+                    {
+                        Date = DateOnly.ParseExact(day, "ddd MMM d", null),
+                        Venue = location[0].Trim(),
+                        City = location[1].Trim(),
+                        Artists = artists
+                    };
+
                     string meta = string.Join(" ", show.SelectNodes("./text()")
                         .Select(n => n.InnerText.Trim())
-                        .Where(text => text != "" && text != ","));
+                        .Where(text => text != "" && text != ","))
+                        .Trim();
 
-                    // TODO: construct Show objects and add to return list 
-                    _logger.LogInformation($"\nDATE: {day}\nVENUE: {location[0]}\nCITY: {location[1]}\nARTIST: {string.Join(", ", artists)}\nMETA: {meta}\n");
+                    var ageMatch = Regex.Match(meta, @"(a/a|21\+|18\+|16\+|14\+|12\+)(\s+\(([^)]+)\))?");
+                    if (ageMatch.Success)
+                    {
+                        s.AllAges = ageMatch.Groups[1].Value == "a/a";
+                        s.AgeMeta = ageMatch.Groups[3].Success ? ageMatch.Groups[3].Value : null;
+                    }
+                    else
+                    {
+                        s.AllAges = false;
+                    }
+
+                    s.Recommended = meta.Contains(" *");
+                    s.U21DrinkTix = meta.Contains(" ^");
+                    s.PitWarning = meta.Contains(" @");
+                    s.NoInsOuts = meta.Contains(" #");
+
+
+                    weeklyShows.Add(s);
+                    _logger.LogInformation(s.ToString());
                 }
 
             }
@@ -105,8 +134,8 @@ namespace MyList.Scraper.Services
             return weeklyShows;
         }
 
-        /*  
-            Scrape "The List" and capture all show data  
+        /*
+            Scrape "The List" and capture all show data
         */
         public async Task<List<Show>> ScrapeListAsync()
         {
