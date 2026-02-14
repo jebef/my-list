@@ -2,6 +2,7 @@ namespace MyList.Data.Models
 {
     public class Show
     {
+        public int Id { get; set; }
         public required DateOnly Date { get; set; }
         public TimeOnly? DoorsTime { get; set; }
         public List<TimeOnly>? StartTimes { get; set; }

@@ -12,4 +12,8 @@
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.2" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.3" />
   </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MyList.Data\MyList.Data.csproj" />
+  </ItemGroup>
 </Project>
