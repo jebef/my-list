@@ -57,7 +57,6 @@ namespace MyList.Scraper.Services
             foreach (var node in nodes)
             {
                 string href = node.GetAttributeValue("href", "");
-                string text = node.InnerText;
                 if (String.IsNullOrEmpty(href)) continue;
                 if (!href.StartsWith("by-date")) break;
                 var weeklyUrl = new Uri(_baseUrl, href);
@@ -80,34 +79,47 @@ namespace MyList.Scraper.Services
 
             // parse shows for this week 
             var nodes = doc.DocumentNode.SelectNodes("//body/ul/li");
+            if (nodes == null) return weeklyShows;
+
             foreach (var node in nodes)
             {
-                // capture day and shows 
-                string day = node.SelectSingleNode(".//a//b").InnerText; // "Wed Feb 11"
-                var shows = node.SelectNodes(".//ul//li");
+                // capture day and shows
+                var dayNode = node.SelectSingleNode(".//a//b");
+                if (dayNode == null) continue;
+                string day = dayNode.InnerText;
 
-                // parse shows for this day 
+                var shows = node.SelectNodes(".//ul//li");
+                if (shows == null) continue;
+
+                // parse shows for this day
                 foreach (var show in shows)
                 {
-                    string[] location = show.SelectSingleNode("./b/a").InnerText.Split(",");
-
-                    List<string> artists = show.SelectNodes("./a")
-                        .Select(artist => artist.InnerText)
-                        .ToList();
-
-                    var s = new Show
+                    try
                     {
-                        Date = DateOnly.ParseExact(day, "ddd MMM d", null),
-                        Venue = location[0].Trim(),
-                        City = location[1].Trim(),
-                        Artists = artists
-                    };
+                        var locationNode = show.SelectSingleNode("./b/a");
+                        if (locationNode == null) continue;
+                        string[] location = locationNode.InnerText.Split(",");
 
-                    // capture and parse metadata 
-                    string meta = string.Join(" ", show.SelectNodes("./text()")
-                        .Select(n => n.InnerText.Trim())
-                        .Where(text => text != "" && text != ","))
-                        .Trim();
+                        var artistNodes = show.SelectNodes("./a");
+                        List<string> artists = artistNodes != null
+                            ? artistNodes.Select(artist => artist.InnerText).ToList()
+                            : [];
+
+                        var s = new Show
+                        {
+                            Date = DateOnly.ParseExact(day, "ddd MMM d", null),
+                            Venue = location[0].Trim(),
+                            City = location.Length > 1 ? location[1].Trim() : "",
+                            Artists = artists
+                        };
+
+                        // capture and parse metadata
+                        var textNodes = show.SelectNodes("./text()");
+                        string meta = textNodes != null
+                            ? string.Join(" ", textNodes
+                                .Select(n => n.InnerText.Trim())
+                                .Where(text => text != "" && text != ",")).Trim()
+                            : "";
 
                     // age 
                     var ageMatch = Regex.Match(meta, @"(a/a|21\+|18\+|16\+|14\+|12\+)(\s+\(([^)]+)\))?");
@@ -178,9 +190,13 @@ namespace MyList.Scraper.Services
                     s.WillSellOut = willSellOutMatch.Success;
 
                     weeklyShows.Add(s);
-                    _logger.LogInformation(s.ToString());
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning("Skipping malformed show: {Message}", ex.Message);
+                        continue;
+                    }
                 }
-
             }
 
             return weeklyShows;
@@ -194,15 +210,12 @@ namespace MyList.Scraper.Services
             List<Uri> urls = await GetWeeklyPageUrls();
             List<Show> shows = [];
 
-            int counterDebug = 0;
-
             foreach (Uri url in urls)
             {
-                if (counterDebug > 0) break;
-                _logger.LogInformation(url.ToString());
                 string html = await GetHtml(url);
-                ParseWeeklyPage(html);
-                counterDebug++;
+                List<Show> weekShows = ParseWeeklyPage(html);
+                shows.AddRange(weekShows);
+                _logger.LogInformation(weekShows[0].ToString());
             }
 
             return shows;
