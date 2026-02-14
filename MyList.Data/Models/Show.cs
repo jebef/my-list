@@ -1,4 +1,4 @@
-namespace MyList.Scraper.Models
+namespace MyList.Data.Models
 {
     public class Show
     {
