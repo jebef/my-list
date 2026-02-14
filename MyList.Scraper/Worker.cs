@@ -1,20 +1,18 @@
+using MyList.Data;
 using MyList.Scraper.Services;
 namespace MyList.Scraper;
 
-public class Worker(ILogger<Worker> logger, ListScraper scraper) : BackgroundService
+public class Worker(ILogger<Worker> logger, ListScraper scraper, IServiceScopeFactory scopeFactory) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await scraper.ScrapeListAsync();
+        var shows = await scraper.ScrapeListAsync();
 
-        
-        // while (!stoppingToken.IsCancellationRequested)
-        // {
-        //     if (logger.IsEnabled(LogLevel.Information))
-        //     {
-        //         logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
-        //     }
-        //     await Task.Delay(1000, stoppingToken);
-        // }
+        using var scope = scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        db.Shows.AddRange(shows);
+        await db.SaveChangesAsync(stoppingToken);
+        logger.LogInformation("Saved {Count} shows to database", shows.Count);
     }
 }
