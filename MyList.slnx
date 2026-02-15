@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="MyList.Api/MyList.Api.csproj" />
+  <Project Path="MyList.Scraper/MyList.Scraper.csproj" />
+  <Project Path="MyList.Shared/MyList.Shared.csproj" />
+</Solution>

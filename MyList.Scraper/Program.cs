@@ -3,11 +3,13 @@ using MyList.Scraper.Services;
 
 var builder = Host.CreateApplicationBuilder(args);
 
-//--- Worker ---//
+//--- DI ---//
 builder.Services.AddHostedService<Worker>();
-
-//--- ListScraper ---// 
 builder.Services.AddHttpClient<ListScraper>();
+builder.Services.AddHttpClient("ApiClient", client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["ApiBaseUrl"] ?? "http://localhost:5000");
+});
 
 var host = builder.Build();
 host.Run();
