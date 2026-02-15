@@ -2,7 +2,7 @@ using System.Text.Encodings.Web;
 using System.Text.RegularExpressions;
 using HtmlAgilityPack;
 using System.Linq;
-using MyList.Data.Models;
+using MyList.Scraper.Models;
 using System.Net;
 using Microsoft.VisualBasic;
 
@@ -57,7 +57,7 @@ namespace MyList.Scraper.Services
             foreach (var node in nodes)
             {
                 string href = node.GetAttributeValue("href", "");
-                if (String.IsNullOrEmpty(href)) continue;
+                if (string.IsNullOrEmpty(href)) continue;
                 if (!href.StartsWith("by-date")) break;
                 var weeklyUrl = new Uri(_baseUrl, href);
                 weeklyUrls.Add(weeklyUrl);
