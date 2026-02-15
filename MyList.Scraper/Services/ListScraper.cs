@@ -2,7 +2,7 @@ using System.Text.Encodings.Web;
 using System.Text.RegularExpressions;
 using HtmlAgilityPack;
 using System.Linq;
-using MyList.Scraper.Models;
+using MyList.Shared.Models;
 using System.Net;
 using Microsoft.VisualBasic;
 
