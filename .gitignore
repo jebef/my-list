@@ -1,5 +1,6 @@
 # Build outputs
 bin/
+bin\\*
 obj/
 
 # User-specific files
@@ -18,3 +19,6 @@ secrets.json
 
 # Environment
 *.env
+
+# Dev notes 
+study-notes
