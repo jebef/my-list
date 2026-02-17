@@ -13,7 +13,7 @@ public class EmailSender(ILogger<EmailSender> logger, IConfiguration config)
     {
         var message = new MimeMessage();
         message.From.Add(new MailboxAddress("MyList", "noreply@mylist.com"));
-        message.To.Add(new MailboxAddress("", "wyattjebef@gmail.com")); 
+        message.To.Add(new MailboxAddress("", config["Smtp:Username"]??"")); 
         message.Subject = $"{shows.Count} upcoming shows this week";
 
         message.Body = new TextPart("plain")

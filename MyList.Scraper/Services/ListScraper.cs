@@ -214,7 +214,7 @@ namespace MyList.Scraper.Services
                 string html = await GetHtml(url);
                 List<Show> weekShows = ParseWeeklyPage(html);
                 shows.AddRange(weekShows);
-                _logger.LogInformation(weekShows[0].ToString());
+                //_logger.LogInformation(weekShows[0].ToString());
             }
 
             return shows;
